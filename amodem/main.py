@@ -42,18 +42,18 @@ def recv(config, src, dst, time_dst, dump_audio=None, pylab=None):
         src = stream.Dumper(src, dump_audio)
     reader = stream.Reader(src, data_type=common.loads)
     signal = itertools.chain.from_iterable(reader)
-
     log.debug('Skipping %.3f seconds', config.skip_start)
     common.take(signal, int(config.skip_start * config.Fs))
-
     pylab = pylab or common.Dummy()
     detector = detect.Detector(config=config, pylab=pylab)
     receiver = _recv.Receiver(config=config, pylab=pylab)
+    offset = config.skip_start * config.Fs
     while True:
         try:
             log.info('Waiting for carrier tone: %.1f kHz', config.Fc / 1e3)
-            signal, amplitude, freq_error, start_time = detector.run(signal)
-
+            print("111", offset)
+            signal, amplitude, freq_error, start_time, offset = detector.run(signal, offset)
+            print("222", offset)
             freq = 1 / (1.0 + freq_error)  # receiver's compensated frequency
             log.debug('Frequency correction: %.3f ppm', (freq - 1) * 1e6)
 
@@ -62,14 +62,24 @@ def recv(config, src, dst, time_dst, dump_audio=None, pylab=None):
 
             sampler = sampling.Sampler(signal, sampling.defaultInterpolator,
                                        freq=freq)
-            receiver.run(sampler, 1.0/amplitude, dst, time_dst, start_time)
-            return True
+            print("333", offset)
+            offset = receiver.run(sampler, 1.0/amplitude, dst, time_dst, start_time, offset)
+            print("444", offset)
+            dst.flush()
+            receiver.report()
+            # return True
         except Exception as inst:
             p, = inst.args
+            # print(p)
+            # if p == "finish":
+            #     dst.flush()
+            #     receiver.report()
+            if p == 'next':
+                receiver.report()
+                continue
             if p == "End":
+                print("endddd", offset)
                 break
-            if p == "finish":
-                dst.flush()
         except BaseException:  # pylint: disable=broad-except
             log.exception('Decoding failed')
             return False

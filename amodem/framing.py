@@ -6,6 +6,8 @@ import struct
 
 from . import common
 
+error_count = 0
+
 log = logging.getLogger(__name__)
 
 
@@ -29,6 +31,10 @@ class Checksum:
         if received != expected:
             log.warning('Invalid checksum: %08x != %08x', received, expected)
             # raise ValueError('Invalid checksum')
+            global error_count
+            error_count += 1
+            if error_count >= 10:
+                return self.EOF
             return []
         log.debug('Good checksum: %08x', received)
         return payload
@@ -54,27 +60,27 @@ class Framer:
 
     def decode(self, data):
         data = iter(data)
+        global error_count
+        error_count = 0
         while True:
             length, = _take_fmt(data, self.prefix_fmt)
             frame = _take_len(data, length)
-            # print("-----------------------------------------------------")
-            # print(length)
-            # print(frame)
-            # print("-----------------------------------------------------")
             block = self.checksum.decode(frame)
-            if block == self.EOF:
-                log.debug('EOF frame detected')
-                return
+            # if block == self.EOF:
+            #     log.debug('EOF frame detected')
+            #     return
 
             yield block
 
 
 def _take_fmt(data, fmt):
+    print("+++fmt=====================")
     length = struct.calcsize(fmt)
     chunk = bytearray(itertools.islice(data, length))
     if len(chunk) < length:
         raise ValueError('missing prefix data')
-    # return (12,)
+    print("---fmt=====================")
+    return (12,)
     return struct.unpack(fmt, bytes(chunk))
 
 

@@ -51,13 +51,13 @@ class Detector:
         raise Exception("End")
         # raise ValueError('No carrier detected')
 
-    def run(self, samples):
+    def run(self, samples, offset1):
         offset, bufs = self._wait(samples)
 
         length = (self.CARRIER_THRESHOLD - 1) * self.Nsym
-        begin = offset - length
-
-        start_time = begin * self.Tsym / self.Nsym
+        offset1 += offset
+        offset1 = offset1 - length
+        start_time = offset1 * self.Tsym / self.Nsym
         log.info('Carrier detected at ~%.1f ms @ %.1f kHz',
                  start_time * 1e3, self.freq / 1e3)
 
@@ -70,6 +70,7 @@ class Detector:
 
         buf = np.concatenate(bufs)
         offset = self.find_start(buf)
+        offset1 += offset
         start_time += (offset / self.Nsym - self.SEARCH_WINDOW) * self.Tsym
         log.debug('Carrier starts at %.3f ms', start_time * 1e3)
 
@@ -77,7 +78,7 @@ class Detector:
 
         prefix_length = self.CARRIER_DURATION * self.Nsym
         amplitude, freq_err = self.estimate(buf[:prefix_length])
-        return itertools.chain(buf, samples), amplitude, freq_err, start_time
+        return itertools.chain(buf, samples), amplitude, freq_err, start_time, offset1
 
     def find_start(self, buf):
         carrier = dsp.exp_iwt(self.omega, self.Nsym)

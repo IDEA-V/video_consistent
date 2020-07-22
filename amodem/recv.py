@@ -157,9 +157,8 @@ class Receiver:
             (1.0 - sampler.freq) * 1e6
         )
 
-    def run(self, sampler, gain, output, time_output, start_time):
+    def run(self, sampler, gain, output, time_output, start_time, offset):
         log.debug('Receiving')
-        print(self.Nsym)
         symbols = dsp.Demux(sampler, omegas=self.omegas, Nsym=self.Nsym)
         self._prefix(symbols, gain=gain)
 
@@ -170,10 +169,20 @@ class Receiver:
         bitstream = itertools.chain.from_iterable(bitstream)
 
         for frame in framing.decode_frames(bitstream):
-            output.writelines([str(frame)])
-            time_output.writelines([str(start_time)])
-            raise Exception("finish")
-            self.output_size += len(frame)
+            if len(frame) != 0:
+                output.write(frame)
+                output.write(b'\n')
+                time_output.write(str(start_time))
+                time_output.write('\n')
+                self.output_size += len(frame)
+                print("==============================")
+                print(symbols.offset)
+                print("==============================")
+                return offset + symbols.offset
+            if frame == self.EOF:
+                self.output_size += len(frame)
+                return offset + symbols.offset
+                # raise Exception("finish")
 
     def report(self):
         if self.stats:

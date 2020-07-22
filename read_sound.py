@@ -4,9 +4,9 @@ import numpy as np
 import os
 import struct
 
-f = open("out.pcm",'wb')
+f = open("out1.pcm",'wb')
 
-name = "VID_20200714_164018_00_050.insv"
+name = "VID_20200708_155406_00_026.insv"
 v = VideoFileClip(name)
 a = v.audio.to_soundarray()
 

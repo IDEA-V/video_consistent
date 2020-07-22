@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 import zlib
+import time
+import struct
 
 import pkg_resources
 
@@ -13,7 +15,6 @@ from . import audio
 from . import calib
 from . import main
 from .config import bitrates
-
 
 # Python 3 has `buffer` attribute for byte-based I/O
 _stdin = getattr(sys.stdin, 'buffer', sys.stdin)
@@ -254,7 +255,18 @@ def _main():
         interface.load(args.audio_library)
 
     with interface:
-        args.src = args.input_type(args.input)
+        if args.command == 'send':
+            f = open("data.tx", "wb")
+            t = time.time() + 0.25
+            print(time.time())
+            b = struct.pack('d', t)
+            for i in range(5):
+                f.write(b)
+            f.close()
+            args.src = args.input_type("data.tx")
+        else:
+            args.src = args.input_type(args.input)
+        
         args.dst = args.output_type(args.output)
         args.time_dst = open("time.rx", "w+")
         try:
