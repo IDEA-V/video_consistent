@@ -64,7 +64,9 @@ class Framer:
         error_count = 0
         while True:
             length, = _take_fmt(data, self.prefix_fmt)
+            print("+++frame===============================")
             frame = _take_len(data, length)
+            print("---frame===============================")
             block = self.checksum.decode(frame)
             # if block == self.EOF:
             #     log.debug('EOF frame detected')

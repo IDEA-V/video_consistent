@@ -59,6 +59,7 @@ class Receiver:
         signal_length = equalizer_length * self.Nsym + prefix + postfix
 
         signal = sampler.take(signal_length + lookahead)
+        offset = len(signal)
 
         coeffs = equalizer.train(
             signal=signal[prefix:-postfix],
@@ -75,7 +76,7 @@ class Receiver:
         equalized = list(equalization_filter(signal))
         equalized = equalized[prefix+lookahead:-postfix+lookahead]
         self._verify_training(equalized, train_symbols)
-        return equalization_filter
+        return equalization_filter, offset
 
     def _verify_training(self, equalized, train_symbols):
         equalizer_length = equalizer.equalizer_length
@@ -160,14 +161,17 @@ class Receiver:
     def run(self, sampler, gain, output, time_output, start_time, offset):
         log.debug('Receiving')
         symbols = dsp.Demux(sampler, omegas=self.omegas, Nsym=self.Nsym)
+        print("prefix----------------------------------------")
+
         self._prefix(symbols, gain=gain)
-
-        filt = self._train(sampler, order=10, lookahead=10)
+        print("train----------------------------------------")
+        filt, add = self._train(sampler, order=10, lookahead=10)
+        symbols.offset = symbols.offset + add
         sampler.equalizer = lambda x: list(filt(x))
-
+        print("demodulate----------------------------------------")
         bitstream = self._demodulate(sampler, symbols)
         bitstream = itertools.chain.from_iterable(bitstream)
-
+        print("framing----------------------------------------")
         for frame in framing.decode_frames(bitstream):
             if len(frame) != 0:
                 output.write(frame)
@@ -180,7 +184,6 @@ class Receiver:
                 print("==============================")
                 return offset + symbols.offset
             if frame == self.EOF:
-                self.output_size += len(frame)
                 return offset + symbols.offset
                 # raise Exception("finish")
 

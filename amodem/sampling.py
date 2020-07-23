@@ -58,6 +58,7 @@ class Sampler:
             self.take = lambda size: common.take(src, size)
 
     def _take(self, size):
+        print("aaaaaaaaaaaaaaaaaa")
         frame = np.zeros(size)
         count = 0
         for frame_index in range(size):
