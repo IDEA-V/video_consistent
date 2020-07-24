@@ -30,15 +30,16 @@ class Detector:
         self.maxlen = config.baud  # 1 second of symbols
         self.max_offset = config.timeout * config.Fs
         self.plt = pylab
+        self.offset = 0
 
     def _wait(self, samples):
         counter = 0
         bufs = collections.deque([], maxlen=self.maxlen)
         for offset, buf in common.iterate(samples, self.Nsym, index=True):
+            self.offset += len(buf)
             if offset > self.max_offset:
                 raise ValueError('Timeout waiting for carrier')
             bufs.append(buf)
-
             coeff = dsp.coherence(buf, self.omega)
             if abs(coeff) > self.COHERENCE_THRESHOLD:
                 counter += 1
@@ -47,13 +48,13 @@ class Detector:
 
             if counter == self.CARRIER_THRESHOLD:
                 return offset, bufs
-
         raise Exception("End")
         # raise ValueError('No carrier detected')
 
     def run(self, samples, offset1):
+        self.offset = 0
         offset, bufs = self._wait(samples)
-
+        print("end detected")
         length = (self.CARRIER_THRESHOLD - 1) * self.Nsym
         offset1 += offset
         offset1 = offset1 - length

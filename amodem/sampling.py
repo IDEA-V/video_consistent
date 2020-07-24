@@ -37,6 +37,7 @@ class Sampler:
     def __init__(self, src, interp=None, freq=1.0):
         self.freq = freq
         self.equalizer = lambda x: x  # LTI equalization filter
+        self.i = 0
         if interp is not None:
             self.interp = interp
             self.resolution = self.interp.resolution
@@ -58,7 +59,6 @@ class Sampler:
             self.take = lambda size: common.take(src, size)
 
     def _take(self, size):
-        print("aaaaaaaaaaaaaaaaaa")
         frame = np.zeros(size)
         count = 0
         for frame_index in range(size):
@@ -81,7 +81,7 @@ class Sampler:
             # apply interpolation filter
             frame[frame_index] = np.dot(coeffs, self.buff)
             count = frame_index + 1
-
+        self.i = self.i + count
         return self.equalizer(frame[:count])
 
 

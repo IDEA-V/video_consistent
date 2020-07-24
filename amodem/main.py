@@ -47,7 +47,7 @@ def recv(config, src, dst, time_dst, dump_audio=None, pylab=None):
     pylab = pylab or common.Dummy()
     detector = detect.Detector(config=config, pylab=pylab)
     receiver = _recv.Receiver(config=config, pylab=pylab)
-    offset = config.skip_start * config.Fs
+    offset = int(config.skip_start * config.Fs)
     while True:
         try:
             log.info('Waiting for carrier tone: %.1f kHz', config.Fc / 1e3)
@@ -63,10 +63,9 @@ def recv(config, src, dst, time_dst, dump_audio=None, pylab=None):
             sampler = sampling.Sampler(signal, sampling.defaultInterpolator,
                                        freq=freq)
             print("333", offset)
-            offset = receiver.run(sampler, 1.0/amplitude, dst, time_dst, start_time, offset)
+            receiver.run(sampler, 1.0/amplitude, dst, time_dst, start_time)
+            offset = offset + sampler.i
             print("444", offset)
-            dst.flush()
-            receiver.report()
             # return True
         except Exception as inst:
             p, = inst.args
@@ -74,13 +73,13 @@ def recv(config, src, dst, time_dst, dump_audio=None, pylab=None):
             # if p == "finish":
             #     dst.flush()
             #     receiver.report()
-            if p == 'next':
-                receiver.report()
-                continue
             if p == "End":
+                offset += detector.offset
+                print(detector.offset)
                 print("endddd", offset)
                 break
         except BaseException:  # pylint: disable=broad-except
+            print("ssssss")
             log.exception('Decoding failed')
             return False
         finally:

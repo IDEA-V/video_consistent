@@ -26,15 +26,12 @@ class Demux:
         self.filters = [exp_iwt(-w, Nsym) / (0.5*self.Nsym) for w in omegas]
         self.filters = np.array(self.filters)
         self.sampler = sampler
-        self.offset = 0
 
     def __iter__(self):
         return self
 
     def next(self):
         frame = self.sampler.take(size=self.Nsym)
-        self.offset += len(frame)
-        print(len(frame), self.offset)
         if len(frame) == self.Nsym:
             global NUM
             if NUM < 1:

@@ -59,7 +59,6 @@ class Receiver:
         signal_length = equalizer_length * self.Nsym + prefix + postfix
 
         signal = sampler.take(signal_length + lookahead)
-        offset = len(signal)
 
         coeffs = equalizer.train(
             signal=signal[prefix:-postfix],
@@ -76,7 +75,7 @@ class Receiver:
         equalized = list(equalization_filter(signal))
         equalized = equalized[prefix+lookahead:-postfix+lookahead]
         self._verify_training(equalized, train_symbols)
-        return equalization_filter, offset
+        return equalization_filter
 
     def _verify_training(self, equalized, train_symbols):
         equalizer_length = equalizer.equalizer_length
@@ -158,15 +157,13 @@ class Receiver:
             (1.0 - sampler.freq) * 1e6
         )
 
-    def run(self, sampler, gain, output, time_output, start_time, offset):
+    def run(self, sampler, gain, output, time_output, start_time):
         log.debug('Receiving')
         symbols = dsp.Demux(sampler, omegas=self.omegas, Nsym=self.Nsym)
         print("prefix----------------------------------------")
-
         self._prefix(symbols, gain=gain)
         print("train----------------------------------------")
-        filt, add = self._train(sampler, order=10, lookahead=10)
-        symbols.offset = symbols.offset + add
+        filt= self._train(sampler, order=10, lookahead=10)
         sampler.equalizer = lambda x: list(filt(x))
         print("demodulate----------------------------------------")
         bitstream = self._demodulate(sampler, symbols)
@@ -179,12 +176,9 @@ class Receiver:
                 time_output.write(str(start_time))
                 time_output.write('\n')
                 self.output_size += len(frame)
-                print("==============================")
-                print(symbols.offset)
-                print("==============================")
-                return offset + symbols.offset
+                return
             if frame == self.EOF:
-                return offset + symbols.offset
+                return
                 # raise Exception("finish")
 
     def report(self):
